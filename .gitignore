@@ -1,0 +1,6 @@
+# Avoid save data
+*.asv
+*.mat
+*.wav
+*.png
+*.pdf
