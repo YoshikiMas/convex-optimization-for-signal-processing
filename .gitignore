@@ -2,6 +2,7 @@
 *.asv
 *.mat
 *.wav
-*.png
 *.pdf
 *.mp4
+*.tex
+*.sty
