@@ -1,12 +1,7 @@
 # LASSO example in Proximal algorithms
 
 
-Code: \href{https://web.stanford.edu/~boyd/papers/prox_algs/lasso.html}{https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/lasso.html}
-
-
-
-
-This unofficial reimprementation woks without CVX.
+Unofficial implementation of an example of LASSO in proximal algorithms [1]. 
 
 
 
@@ -291,4 +286,20 @@ function x = prox_l1(v, lambda)
     x = max(0, v - lambda) - max(0, -v - lambda);
 end
 ```
+
+## Reference
+
+
+[1] N. Parikh and S. Boyd, "Proximal Algorithms," Foundations and Trends in Optimization, 1(3):123-231, 2014.
+
+
+
+
+Official Code: \href{https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html}{https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html}
+
+
+
+
+Proximal operators:[https://github.com/cvxgrp/proximal](https://github.com/cvxgrp/proximal)
+
 
