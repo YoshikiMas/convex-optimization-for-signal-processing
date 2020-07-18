@@ -295,11 +295,11 @@ end
 
 
 
-Official Code: \href{https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html}{https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html}
+Official Code:[https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html](https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html)
 
 
 
 
-Proximal operators:[https://github.com/cvxgrp/proximal](https://github.com/cvxgrp/proximal)
+Proximal operators: [https://github.com/cvxgrp/proximal](https://github.com/cvxgrp/proximal)
 
 
