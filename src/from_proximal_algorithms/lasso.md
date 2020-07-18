@@ -295,7 +295,7 @@ end
 
 
 
-Official Code:[https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html](https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html)
+Official Code: [https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html](https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html)
 
 
 

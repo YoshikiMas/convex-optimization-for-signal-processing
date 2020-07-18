@@ -300,6 +300,6 @@ Official Code: [https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/
 
 
 
-Proximal operators:[https://github.com/cvxgrp/proximal](https://github.com/cvxgrp/proximal)
+Proximal operators: [https://github.com/cvxgrp/proximal](https://github.com/cvxgrp/proximal)
 
 
