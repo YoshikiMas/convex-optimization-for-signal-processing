@@ -1,7 +1,7 @@
-# LASSO example in Proximal algorithms
+# Matrix decomposition example in Proximal algorithms
 
 
-Unofficial implementation of an example of LASSO in proximal algorithms [1]. 
+Unofficial implementation of an example of matrix decomposition in proximal algorithms [1]. 
 
 
 
@@ -10,280 +10,183 @@ clear all;
 rng(0);
 
 % Data size
-m = 200;  % number of examples
-n = 1000;  % number of features
+m = 20;  % number of rows
+n = 50;  % number of colmuns
 
 % Params
-MAX_ITER = 500;
-ABSTOL = 1e-14;
-RELTOL = 1e-14;
-SNR = 24;  % in dB
-gamma_ratio = 0.1;
+MAX_ITER = 300;
+ABSTOL   = 1e-6;
+RELTOL   = 1e-6;
+N = 3;  % number of components
+r = 4;  % rank
+gamma_ratio = 0.15;
 ```
 
 
 ```matlab:Code
 %  Data preparation
-x0 = sprandn(n,1,0.05);
-A = randn(m,n);
-A = A*spdiags(1./sqrt(sum(A.^2))',0,n,n);
-v = randn(m,1);
-v = v/norm(v)*norm(A*x0)*10^(-24/20);
-b = A*x0 + v;
+L = randn(m,r) * randn(r,n);
+S = sprandn(m,n,0.05);
+S(S ~= 0) = 20*binornd(1,0.5,nnz(S),1)-10;
+V = 0.01*randn(m,n);
+
+A = S + L + V;
 ```
 
 
 ```matlab:Code
 % Set gamma
-gamma_max = norm(A'*b,'inf');
-gamma = gamma_ratio*gamma_max;
-
-% cached computations for all methods
-AtA = A'*A;
-Atb = A'*b;
-f = @(u) 0.5*norm(A*u-b)^2;
-```
-
-
-```matlab:Code
-% Proximal gradient descent ()
-lambda = 1;
-beta = 0.5;
-
-x = zeros(n,1);
-
-tic;
-for k = 1:2
-    while 1 
-        grad_x = AtA*x - Atb;
-        z = prox_l1(x - lambda*grad_x, lambda*gamma);
-        if f(z) <= f(x) + grad_x'*(z - x) + (1/(2*lambda))*norm(z - x)^2
-            break;
-        end
-        lambda = beta*lambda;
-    end
-    x = z;
-end
-```
-
-
-```matlab:Code
-% Proximal gradient descent
-lambda = 1;
-beta = 0.5;
-
-x = zeros(n,1);
-
-tic;
-for k = 1:MAX_ITER
-    while 1 
-        grad_x = AtA*x - Atb;
-        z = prox_l1(x - lambda*grad_x, lambda*gamma);
-        if f(z) <= f(x) + grad_x'*(z - x) + (1/(2*lambda))*norm(z - x)^2
-            break;
-        end
-        lambda = beta*lambda;
-    end
-    h.prox_toc(k) = toc;
-    h.prox_diff(k) = norm(x-z);
-    h.prox_optval(k) = objective(A, b, gamma, x, x);
-    
-    x = z;
-
-    if k > 1 && abs(h.prox_optval(k) - h.prox_optval(k-1)) < ABSTOL
-        break;
-    end
-end
-
-h.x_prox = x;
-h.p_prox = h.prox_optval(end);
-```
-
-
-```matlab:Code
-% Acceralated proximal gradient descent
-lambda = 1;
-x = zeros(n,1);
-xprev = x;
-
-tic;
-for k = 1:MAX_ITER
-    y = x + (k/(k+3))*(x - xprev);
-    while 1
-        grad_y = AtA*y - Atb;
-        z = prox_l1(y - lambda*grad_y, lambda*gamma);
-        if f(z) <= f(y) + grad_y'*(z - y) + (1/(2*lambda))*norm(z - y)^2
-            break;
-        end
-        lambda = beta*lambda;
-    end
-    h.fast_toc(k) = toc;
-    h.fast_diff(k) = norm(x-z);
-    h.fast_optval(k) = objective(A, b, gamma, x, x);
-    
-    xprev = x;
-    x = z;
-
-    if k > 1 && abs(h.fast_optval(k) - h.fast_optval(k-1)) < ABSTOL
-        break;
-    end
-end
-
-h.x_fast = x;
-h.p_fast = h.fast_optval(end);
-```
-
-
-```matlab:Code
-% Acceralated proximal gradient descent with restart
-lambda = 1;
-x = zeros(n,1);
-xprev = x;
-kk = 1;
-
-tic;
-for k = 1:MAX_ITER
-    if mod(k,50) ~= 0
-        kk = kk+1;
-        y = x + (kk/(kk+3))*(x - xprev);
-    else
-        kk = 0;
-        y = x;
-    end
-    while 1
-        grad_y = AtA*y - Atb;
-        z = prox_l1(y - lambda*grad_y, lambda*gamma);
-        if f(z) <= f(y) + grad_y'*(z - y) + (1/(2*lambda))*norm(z - y)^2
-            break;
-        end
-        lambda = beta*lambda;
-    end
-    h.fastr_toc(k) = toc;
-    h.fastr_diff(k) = norm(x-z);
-    h.fastr_optval(k) = objective(A, b, gamma, x, x);
-    
-    xprev = x;
-    x = z;
-
-    if k > 1 && abs(h.fastr_optval(k) - h.fastr_optval(k-1)) < ABSTOL
-        break;
-    end
-end
-
-h.x_fastr = x;
-h.p_fastr = h.fastr_optval(end);
+g2_max = norm(A(:),inf);
+g3_max = norm(A);
+g2 = gamma_ratio*g2_max;
+g3 = gamma_ratio*g3_max;
 ```
 
 
 ```matlab:Code
 % ADMM
+X_1 = zeros(m,n);
+X_2 = zeros(m,n);
+X_3 = zeros(m,n);
+z   = zeros(m,N*n);
+U   = zeros(m,n);
 lambda = 1;
 rho = 1/lambda;
-x = zeros(n,1);
-z = zeros(n,1);
-u = zeros(n,1);
-[L U] = factor(A, rho);
 
 tic;
+fprintf('\n%3s\t%10s\t%10s\t%10s\t%10s\t%10s\n', 'iter', ...
+    'r norm', 'eps pri', 's norm', 'eps dual', 'objective');
+```
+
+
+```text:Output
+iter	    r norm	   eps pri	    s norm	  eps dual	 objective
+```
+
+
+```matlab:Code
 
 for k = 1:MAX_ITER
 
-    % x-update
-    q = Atb + rho*(z - u);
-    if m >= n
-       x = U \ (L \ q);
-    else
-       x = lambda*(q - lambda*(A'*(U \ ( L \ (A*q) ))));
-    end
+    B = avg(X_1, X_2, X_3) - A./N + U;
 
-    % z-update
+    % x-update
+    X_1 = (1/(1+lambda))*(X_1 - B);
+    X_2 = prox_l1(X_2 - B, lambda*g2);
+    X_3 = prox_matrix(X_3 - B, lambda*g3, @prox_l1);
+
+    % (for termination checks only)
+    x = [X_1 X_2 X_3];
     zold = z;
-    z = prox_l1(x + u, lambda*gamma);
+    z = x + repmat(-avg(X_1, X_2, X_3) + A./N, 1, N);
 
     % u-update
-    u = u + x - z;
+    U = B;
 
     % diagnostics, reporting, termination checks
-    h.admm_optval(k) = objective(A, b, gamma, x, z);
-    h.admm_diff(k) = norm(-rho*(z - zold));
-    h.admm_rnorm(k) = norm(x - z);
-    h.eps_pri(k) = sqrt(n)*ABSTOL + RELTOL*max(norm(x), norm(-z));
-    h.eps_dual(k) = sqrt(n)*ABSTOL + RELTOL*norm(rho*u);
-    h.admm_toc(k) = toc;
+    h.objval(k)   = objective(X_1, g2, X_2, g3, X_3);
+    h.r_norm(k)   = norm(x - z,'fro');
+    h.s_norm(k)   = norm(-rho*(z - zold),'fro');
+    h.eps_pri(k)  = sqrt(m*n*N)*ABSTOL + RELTOL*max(norm(x,'fro'), norm(-z,'fro'));
+    h.eps_dual(k) = sqrt(m*n*N)*ABSTOL + RELTOL*sqrt(N)*norm(rho*U,'fro');
 
-    if h.admm_rnorm(k) < h.eps_pri(k) && h.admm_diff(k) < h.eps_dual(k)
+    if k == 1 || mod(k,10) == 0
+        fprintf('%4d\t%10.4f\t%10.4f\t%10.4f\t%10.4f\t%10.2f\n', k, ...
+            h.r_norm(k), h.eps_pri(k), h.s_norm(k), h.eps_dual(k), h.objval(k));
+    end
+
+    if h.r_norm(k) < h.eps_pri(k) && h.s_norm(k) < h.eps_dual(k)
          break;
     end
 
 end
+```
 
-h.x_admm = z;
-h.p_admm = h.admm_optval(end);
+
+```text:Output
+   1	   41.7766	    0.0001	   61.5891	    0.0001	    433.51
+  10	    9.7749	    0.0001	    7.9580	    0.0001	   2105.38
+  20	    3.9687	    0.0001	    2.3887	    0.0001	   2217.10
+  30	    1.2071	    0.0001	    0.6616	    0.0001	   2131.29
+  40	    0.4276	    0.0001	    0.2262	    0.0001	   2124.76
+  50	    0.1036	    0.0001	    0.0606	    0.0001	   2122.78
+  60	    0.0313	    0.0001	    0.0200	    0.0001	   2123.38
+  70	    0.0133	    0.0001	    0.0058	    0.0001	   2123.56
+  80	    0.0042	    0.0001	    0.0024	    0.0001	   2123.34
+  90	    0.0013	    0.0001	    0.0007	    0.0001	   2123.38
+ 100	    0.0003	    0.0001	    0.0002	    0.0001	   2123.39
+ 110	    0.0001	    0.0001	    0.0001	    0.0001	   2123.39
 ```
 
 
 ```matlab:Code
-% Visualization
-fig = figure;
-t = tiledlayout(4, 1,'TileSpacing','compact','padding','none');
-nexttile(1);
-plot(h.prox_optval, 'LineWidth', 1.5); hold on
-plot(h.fast_optval, 'LineWidth', 1.5)
-plot(h.fastr_optval, ':', 'LineWidth', 1.5)
-plot(h.admm_optval, 'LineWidth', 1.5)
-legend({'PG', 'APG', 'APG with restart', 'ADMM'})
-xlabel('Iterations')
-ylabel('Cost')
 
-nexttile(2);
-plot(h.prox_toc, h.prox_optval, 'LineWidth', 1.5); hold on
-plot(h.fast_toc, h.fast_optval, 'LineWidth', 1.5)
-plot(h.fastr_toc, h.fastr_optval, ':', 'LineWidth', 1.5)
-plot(h.admm_toc, h.admm_optval, 'LineWidth', 1.5)
-xlim([0, h.prox_toc(end)])
-xlabel('Time [s]')
-ylabel('Cost')
+h.admm_toc = toc;
+h.admm_iter = k;
+h.X1_admm = X_1;
+h.X2_admm = X_2;
+h.X3_admm = X_3;
 
-nexttile(3);
-semilogy(h.prox_diff, 'LineWidth', 1.5);  hold on
-semilogy(h.fast_diff, 'LineWidth', 1.5); 
-semilogy(h.fastr_diff, ':', 'LineWidth', 1.5);
-semilogy(h.admm_diff, 'LineWidth', 1.5);
-xlabel('Iterations')
-ylabel('Norm of difference')
-
-nexttile(4);
-semilogy(h.prox_toc, h.prox_diff, 'LineWidth', 1.5);  hold on
-semilogy(h.fast_toc, h.fast_diff, 'LineWidth', 1.5); 
-semilogy(h.fastr_toc, h.fastr_diff, ':', 'LineWidth', 1.5);
-semilogy(h.admm_toc, h.admm_diff, 'LineWidth', 1.5);
-xlim([0, h.prox_toc(end)])
-xlabel('Time [s]')
-ylabel('Norm of difference')
+fprintf('\nADMM (vs true):\n');
 ```
 
 
-![figure_0.png](matrix_decomposition_images/figure_0.png)
+```text:Output
+ADMM (vs true):
+```
 
 
 ```matlab:Code
-function p = objective(A, b, gamma, x, z)
-    p = 0.5*norm(A*x - b)^2 + gamma*norm(z,1);
+fprintf('|V| = %.2f;  |X_1| = %.2f\n', norm(V, 'fro'), norm(X_1,'fro'));
+```
+
+
+```text:Output
+|V| = 0.31;  |X_1| = 26.23
+```
+
+
+```matlab:Code
+fprintf('nnz(S) = %d; nnz(X_2) = %d\n', nnz(S), nnz(X_2));
+```
+
+
+```text:Output
+nnz(S) = 49; nnz(X_2) = 53
+```
+
+
+```matlab:Code
+fprintf('rank(L) = %d; rank(X_3) = %d\n', rank(L), rank(X_3));
+```
+
+
+```text:Output
+rank(L) = 4; rank(X_3) = 4
+```
+
+
+```matlab:Code
+function p = objective(X_1, g2, X_2, g3, X_3)
+    d = svd(X_3,'econ');
+    p = 0.5*norm(X_1,'fro')^2 + g2*norm(X_2(:),1) + g3*norm(d,1);
 end
-
-function [L U] = factor(A, rho)
-    [m, n] = size(A);
-    if m >= n
-       L = chol(A'*A + rho*speye(n), 'lower');
-    else
-       L = chol(speye(m) + 1/rho*(A*A'), 'lower');
+function x = avg(varargin)
+    N = length(varargin);
+    x = 0;
+    for k = 1:N
+        x = x + varargin{k};
     end
-    L = sparse(L);
-    U = sparse(L');
+    x = x/N;
 end
 
 function x = prox_l1(v, lambda)
     x = max(0, v - lambda) - max(0, -v - lambda);
+end
+
+function x = prox_matrix(v, lambda, prox_f)
+    [U,S,V] = svd(v,'econ');
+    x = U*diag(prox_f(diag(S), lambda))*V';
 end
 ```
 
@@ -295,7 +198,7 @@ end
 
 
 
-Official Code: [https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html](https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html)
+Official Code: \href{https://web.stanford.edu/~boyd/papers/prox_algs/matrix_decomp.html}{https://web.stanford.edu/\textasciitilde{}boyd/papers/prox_algs/matrix_decomp.html}
 
 
 
